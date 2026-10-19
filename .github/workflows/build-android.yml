@@ -1,0 +1,46 @@
+
+name: Build City Car Race Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build-android.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout game repository
+        uses: actions/checkout@v4
+
+      - name: Install Android tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install build packages
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "cmake;3.30.3" "ndk;27.2.12479018"
+
+      - name: Prepare Android project
+        run: |
+          git clone --recurse-submodules https://github.com/Bigfoot71/raymob.git android-project
+          unzip -o City_Car_Race_3D_Android_Source.zip -d game-source
+          cp game-source/city_car_race_3d/main.cpp android-project/app/src/main/cpp/main.cpp
+          sed -i 's/^app.name=.*/app.name=CityCarRace3D/' android-project/gradle.properties
+          sed -i 's/^app.native_library_name=.*/app.native_library_name=citycarrace/' android-project/gradle.properties
+          sed -i 's/^app.application_id=.*/app.application_id=com.hivalabs.citycarrace3d/' android-project/gradle.properties
+
+      - name: Build debug APK
+        run: |
+          cd android-project
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: City-Car-Race-3D-APK
+          path: android-project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          
